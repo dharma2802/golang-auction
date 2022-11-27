@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/seller-app/auction/db"
 	"github.com/seller-app/auction/entities"
+	"github.com/seller-app/auction/utils"
 )
 
 func InsertBidding(w http.ResponseWriter, r *http.Request) {
@@ -17,31 +18,22 @@ func InsertBidding(w http.ResponseWriter, r *http.Request) {
 	query := "INSERT INTO biddings (`bidder_id`, `auction_id`, `amount`) VALUES(?, ?, ?);"
 	inserResult, err := db.Instance.ExecContext(context.Background(), query, bidding.BidderId, bidding.AuctionId, bidding.Amount)
 
-	w.Header().Set("Content-Type", "application/json")
-	var response entities.DefaultResponse
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Status = http.StatusInternalServerError
-		response.Message = "Couldnt insert Bidding data"
-		json.NewEncoder(w).Encode(response)
+		utils.InternalError(w, "Couldnt insert Bidding data")
+		return
+	}
+	biddingId, err := inserResult.LastInsertId()
+
+	if err != nil {
+		fmt.Println(err)
+		utils.InternalError(w, "Couldnt retrive Bidding ID")
+		return
 	} else {
-		biddingId, err := inserResult.LastInsertId()
-
-		if err != nil {
-			fmt.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			response.Status = http.StatusInternalServerError
-			response.Message = "Couldnt retrive Bidding ID"
-			json.NewEncoder(w).Encode(response)
-		} else {
-			bidding.Id = int(biddingId)
-
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(bidding)
-			fmt.Println("Bidding Created")
-		}
-
+		utils.Ok(w)
+		bidding.Id = int(biddingId)
+		json.NewEncoder(w).Encode(bidding)
+		fmt.Println("Bidding Created")
 	}
 
 }
@@ -52,15 +44,9 @@ func GetBiddingsByAution(w http.ResponseWriter, r *http.Request) {
 	isActive := true
 	res, err := db.Instance.Query("SELECT * FROM biddings where is_active = ? and auction_id = ? order by amount desc", isActive, autionId)
 
-	w.Header().Set("Content-Type", "application/json")
-	var response entities.DefaultResponse
-
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Status = http.StatusInternalServerError
-		response.Message = "Couldnt retrive bidders"
-		json.NewEncoder(w).Encode(response)
+		utils.InternalError(w, "Couldnt retrive bidders")
 		return
 	}
 	for res.Next() {
@@ -69,22 +55,16 @@ func GetBiddingsByAution(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			fmt.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			response.Status = http.StatusInternalServerError
-			response.Message = "Couldnt scan bidders"
-			json.NewEncoder(w).Encode(response)
+			utils.InternalError(w, "Couldnt scan bidders")
 			return
 		}
 		biddings = append(biddings, bidding)
 	}
 	if biddings != nil {
-		w.WriteHeader(http.StatusOK)
+		utils.Ok(w)
 		json.NewEncoder(w).Encode(biddings)
 	} else {
-		w.WriteHeader(http.StatusNotFound)
-		response.Status = http.StatusNotFound
-		response.Message = "Couldnt find biddings"
-		json.NewEncoder(w).Encode(response)
+		utils.NotFound(w, "Couldnt find biddings")
 	}
 	fmt.Println("Biddings Details are fetched")
 

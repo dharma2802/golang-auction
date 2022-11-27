@@ -8,6 +8,7 @@ import (
 
 	"github.com/seller-app/auction/db"
 	"github.com/seller-app/auction/entities"
+	"github.com/seller-app/auction/utils"
 )
 
 func GetAdSpaces(w http.ResponseWriter, r *http.Request) {
@@ -15,15 +16,9 @@ func GetAdSpaces(w http.ResponseWriter, r *http.Request) {
 	isActive := true
 	res, err := db.Instance.Query("SELECT * FROM ad_spaces where is_active = ?", isActive)
 
-	w.Header().Set("Content-Type", "application/json")
-	var response entities.DefaultResponse
-
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Status = http.StatusInternalServerError
-		response.Message = "Cannot fetch ad spaces"
-		json.NewEncoder(w).Encode(response)
+		utils.InternalError(w, "Cannot fetch ad spaces")
 		return
 	}
 
@@ -33,22 +28,16 @@ func GetAdSpaces(w http.ResponseWriter, r *http.Request) {
 
 		if err != nil {
 			fmt.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			response.Status = http.StatusInternalServerError
-			response.Message = "Couldnt scan ad space"
-			json.NewEncoder(w).Encode(response)
+			utils.InternalError(w, "Couldnt scan ad space")
 			return
 		}
 		adSpaces = append(adSpaces, adSpace)
 	}
 	if adSpaces != nil {
-		w.WriteHeader(http.StatusOK)
+		utils.Ok(w)
 		json.NewEncoder(w).Encode(adSpaces)
 	} else {
-		w.WriteHeader(http.StatusNotFound)
-		response.Status = http.StatusNotFound
-		response.Message = "Couldnt find ad spaces"
-		json.NewEncoder(w).Encode(response)
+		utils.NotFound(w, "Couldnt find ad spaces")
 	}
 	fmt.Println("Ad Space Details are fetched")
 }
@@ -59,31 +48,22 @@ func InsertAdSpaces(w http.ResponseWriter, r *http.Request) {
 	query := "INSERT INTO ad_spaces (`name`, `position`, `width`, `height`, `price`) VALUES(?, ?, ?, ?, ?);"
 	inserResult, err := db.Instance.ExecContext(context.Background(), query, adSpace.Name, adSpace.Position, adSpace.Width, adSpace.Height, adSpace.Price)
 
-	w.Header().Set("Content-Type", "application/json")
-	var response entities.DefaultResponse
 	if err != nil {
 		fmt.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		response.Status = http.StatusInternalServerError
-		response.Message = "Couldnt insert Ad Space data"
-		json.NewEncoder(w).Encode(response)
+		utils.InternalError(w, "Couldnt insert Ad Space data")
+		return
+	}
+	adSpaceId, err := inserResult.LastInsertId()
+
+	if err != nil {
+		fmt.Println(err)
+		utils.InternalError(w, "Couldnt retrive Ad Space ID")
 	} else {
-		adSpaceId, err := inserResult.LastInsertId()
+		adSpace.Id = int(adSpaceId)
 
-		if err != nil {
-			fmt.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			response.Status = http.StatusInternalServerError
-			response.Message = "Couldnt retrive Ad Space ID"
-			json.NewEncoder(w).Encode(response)
-		} else {
-			adSpace.Id = int(adSpaceId)
-
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(adSpace)
-			fmt.Println("Ad Space Created")
-		}
-
+		utils.Ok(w)
+		json.NewEncoder(w).Encode(adSpace)
+		fmt.Println("Ad Space Created")
 	}
 
 }
