@@ -25,6 +25,15 @@ func NotFound(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func BadRequest(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	var response entities.DefaultResponse
+	w.WriteHeader(http.StatusBadRequest)
+	response.Status = http.StatusBadRequest
+	response.Message = message
+	json.NewEncoder(w).Encode(response)
+}
+
 func Ok(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

@@ -51,7 +51,7 @@ func InsertAuction(w http.ResponseWriter, r *http.Request) {
 	difference := auction.EndTime.Sub(currentTimeUTC)
 
 	if difference <= 0 {
-		utils.InternalError(w, "End Time should not be less than current time")
+		utils.BadRequest(w, "End Time should not be less than current time")
 		return
 	}
 	auction.Status = "PENDING"
