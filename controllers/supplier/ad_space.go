@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/seller-app/auction/db"
@@ -16,9 +15,16 @@ func GetAdSpaces(w http.ResponseWriter, r *http.Request) {
 	isActive := true
 	res, err := db.Instance.Query("SELECT * FROM ad_spaces where is_active = ?", isActive)
 
+	w.Header().Set("Content-Type", "application/json")
+	var response entities.DefaultResponse
+
 	if err != nil {
-		log.Fatal(err)
-		panic("Cannot fetch ad spaces")
+		fmt.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		response.Status = http.StatusInternalServerError
+		response.Message = "Cannot fetch ad spaces"
+		json.NewEncoder(w).Encode(response)
+		return
 	}
 
 	for res.Next() {
@@ -26,13 +32,24 @@ func GetAdSpaces(w http.ResponseWriter, r *http.Request) {
 		err := res.Scan(&adSpace.Id, &adSpace.Name, &adSpace.Position, &adSpace.Width, &adSpace.Height, &adSpace.Price, &adSpace.IsActive, &adSpace.CreatedAt, &adSpace.UpdatedAt)
 
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			response.Status = http.StatusInternalServerError
+			response.Message = "Couldnt scan ad space"
+			json.NewEncoder(w).Encode(response)
+			return
 		}
 		adSpaces = append(adSpaces, adSpace)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(adSpaces)
+	if adSpaces != nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(adSpaces)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+		response.Status = http.StatusNotFound
+		response.Message = "Couldnt find ad spaces"
+		json.NewEncoder(w).Encode(response)
+	}
 	fmt.Println("Ad Space Details are fetched")
 }
 

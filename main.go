@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/seller-app/auction/controllers/demand"
 	"github.com/seller-app/auction/controllers/supplier"
 	"github.com/seller-app/auction/db"
 )
@@ -21,6 +22,20 @@ func main() {
 }
 
 func RegisterProductRoutes(router *mux.Router) {
-	router.HandleFunc("/sa/v1/ad-spaces", supplier.GetAdSpaces).Methods("GET")
+	// ad spaces routes
 	router.HandleFunc("/sa/v1/ad-space", supplier.InsertAdSpaces).Methods("POST")
+	router.HandleFunc("/sa/v1/ad-spaces", supplier.GetAdSpaces).Methods("GET")
+
+	// auctions routes
+	router.HandleFunc("/sa/v1/auction", supplier.InsertAuction).Methods("POST")
+	router.HandleFunc("/sa/v1/auctions", supplier.GetAuctions).Methods("GET")
+
+	// bidder routes
+	router.HandleFunc("/sa/v1/bidder", demand.InsertBidder).Methods("POST")
+	router.HandleFunc("/sa/v1/bidders", demand.GetBidders).Methods("GET")
+
+	// bidding routes
+	router.HandleFunc("/sa/v1/bidding", demand.InsertBidding).Methods("POST")
+	router.HandleFunc("/sa/v1/bidding/{auctionId}", demand.GetBiddingsByAution).Methods("GET")
+
 }
