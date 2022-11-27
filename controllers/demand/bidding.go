@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/seller-app/auction/controllers/supplier"
 	"github.com/seller-app/auction/db"
 	"github.com/seller-app/auction/entities"
 	"github.com/seller-app/auction/utils"
@@ -15,6 +17,12 @@ import (
 func InsertBidding(w http.ResponseWriter, r *http.Request) {
 	var bidding entities.Bidding
 	json.NewDecoder(r.Body).Decode(&bidding)
+
+	if !validateBiddingRequest(bidding, w) {
+		utils.BadRequest(w, "Invalid Request")
+		return
+	}
+
 	query := "INSERT INTO biddings (`bidder_id`, `auction_id`, `amount`) VALUES(?, ?, ?);"
 	inserResult, err := db.Instance.ExecContext(context.Background(), query, bidding.BidderId, bidding.AuctionId, bidding.Amount)
 
@@ -36,6 +44,27 @@ func InsertBidding(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Bidding Created")
 	}
 
+}
+
+func validateBiddingRequest(bidding entities.Bidding, w http.ResponseWriter) bool {
+
+	var auctions = supplier.GetAuctionsById(bidding.AuctionId)
+	if auctions == nil {
+		fmt.Println("No auctions found")
+		return false
+	}
+	currentTimeUTC := time.Now().Local()
+	difference := auctions[0].EndTime.Local().Sub(currentTimeUTC)
+	if difference >= 0 {
+		fmt.Println("Bidding in right time")
+		return supplier.UpdateAuctionStatus(bidding.AuctionId, "STARTED")
+	} else {
+		fmt.Println("Auction ended")
+		if !supplier.UpdateAuctionStatus(bidding.AuctionId, "COMPLETED") {
+			return false
+		}
+		return false
+	}
 }
 
 func GetBiddingsByAution(w http.ResponseWriter, r *http.Request) {

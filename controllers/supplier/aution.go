@@ -43,11 +43,36 @@ func GetAuctions(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Auctions Details are fetched")
 }
 
+func GetAuctionsById(id int) []entities.Auction {
+	var auctions []entities.Auction
+	isActive := true
+
+	res, err := db.Instance.Query("SELECT * FROM auctions where is_active = ? and id = ?", isActive, id)
+
+	if err != nil {
+		fmt.Println(err)
+		return auctions
+	}
+
+	for res.Next() {
+		var auction entities.Auction
+		err := res.Scan(&auction.Id, &auction.AdSpaceId, &auction.EndTime, &auction.Status, &auction.IsActive, &auction.CreatedAt, &auction.UpdatedAt)
+		if err != nil {
+			fmt.Println(err)
+			return auctions
+		}
+		auctions = append(auctions, auction)
+	}
+
+	return auctions
+}
+
 func InsertAuction(w http.ResponseWriter, r *http.Request) {
 	var auction entities.Auction
 	json.NewDecoder(r.Body).Decode(&auction)
 
 	currentTimeUTC := time.Now().Local()
+	auction.EndTime = auction.EndTime.Local()
 	difference := auction.EndTime.Sub(currentTimeUTC)
 
 	if difference <= 0 {
@@ -76,4 +101,14 @@ func InsertAuction(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(auction)
 	fmt.Println("Auction Created")
 
+}
+
+func UpdateAuctionStatus(id int, status string) bool {
+	_, err := db.Instance.Exec("update auctions set status = ? where id = ?", status, id)
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	return true
 }
